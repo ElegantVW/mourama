@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a0a12">
+  <title>Mourama</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='28' fill='%231a0a12'/><circle cx='32' cy='32' r='12' fill='%23e879a0'/></svg>">
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div class="mark">✦ mourama</div>
+      <div id="clock" class="clock"></div>
+    </header>
+    <main id="gate" class="panel">
+      <p class="lede">Five seats. Iberian hills. The office box is the world.</p>
+      <form id="claim-form">
+        <label>Invite <input name="invite" autocomplete="off" required></label>
+        <label>Court name <input name="name" autocomplete="username" required></label>
+        <label>Word <input name="password" type="password" autocomplete="new-password" required></label>
+        <button type="submit">Claim a seat</button>
+      </form>
+      <p class="or">already seated</p>
+      <form id="login-form">
+        <label>Court name <input name="name" autocomplete="username" required></label>
+        <label>Word <input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Sit down</button>
+      </form>
+      <p id="gate-err" class="err" hidden></p>
+    </main>
+    <main id="play" hidden>
+      <nav class="tabs">
+        <button data-tab="hill" class="on">Citânia</button>
+        <button data-tab="map">Wood</button>
+        <button data-tab="reports">Reports</button>
+      </nav>
+      <section id="tab-hill" class="tab">
+        <div id="res" class="res"></div>
+        <div id="hills"></div>
+      </section>
+      <section id="tab-map" class="tab" hidden>
+        <div id="hexmap" class="hexmap"></div>
+        <div id="map-detail" class="panel slim"></div>
+      </section>
+      <section id="tab-reports" class="tab" hidden>
+        <div id="reports"></div>
+      </section>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

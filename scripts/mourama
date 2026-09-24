@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# mourama — thin launcher (never a prebuilt ELF in git)
+# Discovery: MOURAMA_BIN → ~/.local/lib/faeos/mourama → sibling tree
+set -euo pipefail
+
+USER_HOME="${HOME}"
+if [[ -n "${SUDO_USER:-}" ]]; then
+  USER_HOME="$(getent passwd "$SUDO_USER" 2>/dev/null | cut -d: -f6 || true)"
+  USER_HOME="${USER_HOME:-$HOME}"
+fi
+
+CANDIDATES=(
+  "${MOURAMA_BIN:-}"
+  "$USER_HOME/.local/lib/faeos/mourama"
+  /usr/local/lib/faeos/mourama
+  "$USER_HOME/mourama/target/release/mourama"
+  "${MOURAMA_ROOT:-}/target/release/mourama"
+)
+here="$(cd "$(dirname "$0")" && pwd)"
+if [[ -x "$here/../target/release/mourama" ]]; then
+  CANDIDATES+=("$here/../target/release/mourama")
+fi
+
+for c in "${CANDIDATES[@]}"; do
+  [[ -n "$c" && -x "$c" ]] || continue
+  if [[ -z "${MOURAMA_WEB:-}" ]]; then
+    if [[ -d "$USER_HOME/.local/lib/faeos/mourama-web" ]]; then
+      export MOURAMA_WEB="$USER_HOME/.local/lib/faeos/mourama-web"
+    elif [[ -d "$here/../web" ]]; then
+      export MOURAMA_WEB="$here/../web"
+    elif [[ -d "$USER_HOME/mourama/web" ]]; then
+      export MOURAMA_WEB="$USER_HOME/mourama/web"
+    fi
+  fi
+  exec "$c" "$@"
+done
+
+echo "mourama: engine not built yet." >&2
+echo "  next:  cd ~/mourama && ./build.sh install" >&2
+exit 127

@@ -1,0 +1,34 @@
+[package]
+name = "mourama"
+version = "0.1.0"
+edition = "2021"
+description = "Mourama — Iberian persistent hillfort. Five seats. The office box is the world."
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "mourama"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+axum = { version = "0.8", features = ["json", "macros"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+clap = { version = "4", features = ["derive"] }
+hex = "0.4"
+rand = "0.8"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "fs", "sync", "net", "io-util", "signal"] }
+tower-http = { version = "0.6", features = ["fs", "cors"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

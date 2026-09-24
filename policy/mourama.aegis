@@ -1,0 +1,8 @@
+# Mourama — inbound 4747 from office LAN and Tailscale CGNAT range only.
+# Merge into a desktop/server policy. Do not allow 0.0.0.0/0.
+
+table bulwark
+family inet
+
+allow in tcp 4747 from 192.168.8.0/24
+allow in tcp 4747 from 100.64.0.0/10

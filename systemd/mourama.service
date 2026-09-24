@@ -1,0 +1,13 @@
+[Unit]
+Description=Mourama — citânias keep breathing
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/systemd-inhibit --what=sleep:idle --who=mourama --why="citânias keep breathing" %h/.local/lib/faeos/mourama serve
+Restart=always
+RestartSec=3
+Environment=MOURAMA_WEB=%h/.local/lib/faeos/mourama-web
+
+[Install]
+WantedBy=default.target
