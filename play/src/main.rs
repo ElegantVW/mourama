@@ -306,7 +306,7 @@ impl eframe::App for PlayApp {
         }
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
-            ui.add_space(6.0);
+            ui.add_space(4.0);
             ui.horizontal(|ui| {
                 self.icon("app", ui, 28.0);
                 ui.label(egui::RichText::new("mourama").color(PINK).size(20.0).strong());
@@ -315,6 +315,20 @@ impl eframe::App for PlayApp {
                     ui.label(egui::RichText::new(me["name"].as_str().unwrap_or("")).color(BLUSH));
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let close = egui::Button::new(egui::RichText::new("×").size(16.0).color(Color32::from_rgb(0xff, 0xeb, 0xf2)))
+                        .fill(Color32::from_rgb(0x8a, 0x20, 0x40));
+                    if ui.add_sized([28.0, 22.0], close).on_hover_text("leave").clicked() {
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                    let max = egui::Button::new(egui::RichText::new("□").size(14.0)).fill(PANEL);
+                    if ui.add_sized([28.0, 22.0], max).on_hover_text("maximize").clicked() {
+                        let on = ui.input(|i| i.viewport().maximized.unwrap_or(false));
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(!on));
+                    }
+                    let min = egui::Button::new(egui::RichText::new("−").size(16.0)).fill(PANEL);
+                    if ui.add_sized([28.0, 22.0], min).on_hover_text("minimize").clicked() {
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+                    }
                     if ui.button("?").clicked() {
                         self.cfg.tutorial_done = false;
                         self.cfg.tutorial_step = 0;
@@ -847,7 +861,8 @@ fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1180.0, 760.0])
             .with_min_inner_size([860.0, 560.0])
-            .with_title("Mourama"),
+            .with_title("Mourama")
+            .with_decorations(false),
         ..Default::default()
     };
     eframe::run_native(

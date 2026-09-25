@@ -116,6 +116,7 @@ async function refresh() {
   state.me = await api("/api/me");
   state.map = await api("/api/map");
   $("#clock").textContent = when(state.me.clock);
+  await maybeGlitter();
   drawHill();
 }
 
@@ -136,7 +137,7 @@ function drawHill() {
   ]
     .map(([k, v]) => `<div class="pile"><div class="k">${k}</div><div class="v">${fmt(v)}</div></div>`)
     .join("");
-  $("#hills").innerHTML = hills.map(renderHill).join("");
+  $("#hills").innerHTML = (state.slip ? `<div class="slip">${state.slip}</div>` : "") + hills.map(renderHill).join("");
   $("#hills").querySelectorAll("[data-up]").forEach((b) => {
     b.addEventListener("click", () => actUpgrade(b.dataset.cid, b.dataset.up));
   });
@@ -279,16 +280,45 @@ async function sendTo(t, mission) {
   }
 }
 
+function reportText(r) {
+  if (r.body && typeof r.body.text === "string") return r.body.text;
+  if (r.body && r.body.won === true) return r.title + " — the hill yielded.";
+  if (r.body && r.body.won === false) return r.title + " — they held.";
+  if (r.body && r.body.seen) return r.title + " — the falcão looked through.";
+  return r.title || "";
+}
+
 async function drawReports() {
   const j = await api("/api/reports");
   const rows = j.reports || [];
   $("#reports").innerHTML = rows.length
     ? rows
         .map(
-          (r) => `<article class="report"><div class="when">${when(r.created)}</div><strong>${r.title}</strong><pre class="tiny">${JSON.stringify(r.body, null, 0)}</pre></article>`
+          (r) => `<article class="report"><div class="when">${when(r.created)}</div><strong>${r.title}</strong><p class="said">${reportText(r)}</p></article>`
         )
         .join("")
     : "<p class='panel'>No reports yet.</p>";
+}
+
+async function maybeGlitter() {
+  try {
+    const j = await api("/api/reports");
+    const rows = j.reports || [];
+    const note = rows.find((r) => r.body && typeof r.body.text === "string");
+    if (!note) return;
+    state.slip = note.body.text;
+    const key = "mourama_glitter_" + note.id;
+    if (localStorage.getItem(key)) return;
+    const g = $("#glitter");
+    $("#glitter-msg").textContent = note.body.text;
+    g.hidden = false;
+    $("#glitter-ok").onclick = () => {
+      g.hidden = true;
+      localStorage.setItem(key, "1");
+    };
+  } catch {
+    /* silent */
+  }
 }
 
 async function actUpgrade(cid, building) {
