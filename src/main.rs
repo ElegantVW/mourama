@@ -32,6 +32,13 @@ enum Command {
     Status,
     /// Stop is just SIGINT on serve; this prints the law
     Smoor,
+    /// Open the native client
+    Play,
+    /// Leave a report on a seated court (host)
+    Whisper {
+        name: String,
+        message: String,
+    },
 }
 
 fn open_store() -> Result<Store> {
@@ -97,6 +104,34 @@ async fn main() -> Result<()> {
         Command::Smoor => {
             println!("mourama: smooring is stopping serve (Ctrl-C).");
             println!("  next:  time only moves while the office box runs mourama serve.");
+            Ok(())
+        }
+        Command::Play => {
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+            let here = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            let mut candidates = Vec::new();
+            if let Ok(p) = std::env::var("MOURAMA_PLAY") {
+                candidates.push(std::path::PathBuf::from(p));
+            }
+            candidates.push(std::path::PathBuf::from(&home).join(".local/lib/faeos/mourama-play"));
+            candidates.push(here.join("target/release/mourama-play"));
+            candidates.push(
+                std::path::PathBuf::from(&home).join("mourama/target/release/mourama-play"),
+            );
+            for c in candidates {
+                if c.is_file() {
+                    let status = std::process::Command::new(&c).status()?;
+                    std::process::exit(status.code().unwrap_or(1));
+                }
+            }
+            anyhow::bail!(
+                "mourama: native client is not built yet.\n  next:  cd ~/mourama && ./build.sh install"
+            )
+        }
+        Command::Whisper { name, message } => {
+            let store = open_store()?;
+            store.whisper(&name, &message)?;
+            println!("mourama: left a note for {name}.");
             Ok(())
         }
     }

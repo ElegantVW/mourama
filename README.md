@@ -14,12 +14,13 @@ This is a faeOS engine (`ElegantVW/mourama`), not a faeOS in-tree app.
 ```
 cd ~/mourama && ./build.sh install
 mourama invite          # one-time code, max 5 seats
-mourama serve           # :4747  (LAN + tailnet)
+mourama play            # native window (Linux)
 ```
 
-Phone browser: `http://192.168.8.186:4747` on the office LAN, or
-`http://vanguarda:4747` on Tailscale. Sideload `./build.sh apk` when the
-Android SDK is present.
+Server stays on `:4747`. The window is `mourama-play`, not a browser.
+
+Windows zip (when mingw is installed): `./build.sh windows` → `~/Downloads/mourama-windows.zip`.
+APK (when JDK+SDK are installed): `./build.sh apk` → `~/Downloads/mourama.apk`.
 
 ## Keep the box awake
 

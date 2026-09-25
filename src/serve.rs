@@ -61,6 +61,10 @@ async fn api_status(State(app): State<App>) -> Result<Json<Value>, VoiceError> {
     Ok(Json(serde_json::to_value(s)?))
 }
 
+async fn api_catalog() -> Json<Value> {
+    Json(crate::sim::catalog())
+}
+
 #[derive(Deserialize)]
 struct ClaimReq {
     invite: String,
@@ -210,6 +214,7 @@ pub async fn serve(addr: SocketAddr, store: Arc<Store>) -> anyhow::Result<()> {
     let app = App { store: store.clone() };
     let router = Router::new()
         .route("/api/status", get(api_status))
+        .route("/api/catalog", get(api_catalog))
         .route("/api/claim", post(api_claim))
         .route("/api/login", post(api_login))
         .route("/api/me", get(api_me))

@@ -903,9 +903,17 @@ impl Store {
         let veiled = !true_sight && encanto > now_unix();
         let mut bmap = serde_json::Map::new();
         for (k, (lvl, done)) in &levels {
+            let (cost, bronze) = upgrade_cost(*k, *lvl);
             bmap.insert(
                 k.as_str().to_string(),
-                serde_json::json!({ "level": lvl, "upgrade_done": done, "title": k.title() }),
+                serde_json::json!({
+                    "level": lvl,
+                    "upgrade_done": done,
+                    "title": k.title(),
+                    "next_cost": cost,
+                    "next_bronze": bronze,
+                    "next_secs": upgrade_secs(*lvl),
+                }),
             );
         }
         let units = if veiled {
@@ -918,6 +926,13 @@ impl Store {
         } else {
             serde_json::to_value(res)?
         };
+        let (train_kind, train_count, train_done): (Option<String>, i64, Option<i64>) = conn
+            .query_row(
+                "SELECT train_kind, train_count, train_done FROM castros WHERE id=?1",
+                rusqlite::params![id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap_or((None, 0, None));
         Ok(serde_json::json!({
             "id": id,
             "q": q,
@@ -930,6 +945,9 @@ impl Store {
             "garrison": units,
             "encanto_until": encanto,
             "veiled": veiled,
+            "train_kind": train_kind,
+            "train_count": train_count,
+            "train_done": train_done,
         }))
     }
 
@@ -972,7 +990,30 @@ impl Store {
             "hills": hills,
             "armies": armies,
             "clock": now,
+            "catalog": crate::sim::catalog(),
         }))
+    }
+
+    pub fn whisper(&self, name: &str, title: &str) -> Result<()> {
+        let conn = self.conn.lock().expect("db");
+        let id: Option<i64> = conn
+            .query_row(
+                "SELECT id FROM accounts WHERE name = ?1",
+                params![name],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let Some(id) = id else {
+            anyhow::bail!("mourama: no court named {name}.");
+        };
+        Self::report(
+            &conn,
+            id,
+            now_unix(),
+            title,
+            serde_json::json!({ "text": title }),
+        )?;
+        Ok(())
     }
 
     pub fn map(&self, viewer: Option<i64>) -> Result<serde_json::Value> {

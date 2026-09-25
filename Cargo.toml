@@ -1,3 +1,7 @@
+[workspace]
+members = ["play"]
+resolver = "2"
+
 [package]
 name = "mourama"
 version = "0.1.0"

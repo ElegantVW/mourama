@@ -32,6 +32,13 @@ for c in "${CANDIDATES[@]}"; do
       export MOURAMA_WEB="$USER_HOME/mourama/web"
     fi
   fi
+  if [[ -z "${MOURAMA_ICONS:-}" ]]; then
+    if [[ -d "$USER_HOME/.local/lib/faeos/mourama-icons" ]]; then
+      export MOURAMA_ICONS="$USER_HOME/.local/lib/faeos/mourama-icons"
+    elif [[ -d "$here/../assets/icons" ]]; then
+      export MOURAMA_ICONS="$here/../assets/icons"
+    fi
+  fi
   exec "$c" "$@"
 done
 

@@ -15,7 +15,7 @@ windows. Five seats. Pink faeOS chrome on Atlantic granite.
 |---|---|
 | Voice | faeOS error-voice: `mourama: <one sentence>` then `next:`. All-ages. |
 | Engine | One Rust binary. Authoritative tick. SQLite on this disk. |
-| Window | Static HTML the same process serves. Android WebView loads it. |
+| Window | Native `mourama-play` (egui). Icons are local PNGs, not Imagine. |
 | Cap | Five accounts. The sixth is refused in code and in lore. |
 | Secrets | Invites, session tokens, world.sqlite stay on disk `0600`. Never git. |
 | Names | Portuguese folk nouns (citânia, mamoa, orvalho, serpe). English UI. |

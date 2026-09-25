@@ -156,7 +156,6 @@ pub enum Unit {
 }
 
 impl Unit {
-    #[allow(dead_code)]
     pub fn all() -> &'static [Unit] {
         &[
             Unit::Pastor,
@@ -191,7 +190,6 @@ impl Unit {
         })
     }
 
-    #[allow(dead_code)]
     pub fn title(self) -> &'static str {
         match self {
             Unit::Pastor => "Pastor",
@@ -576,6 +574,50 @@ pub fn encanto_secs() -> i64 {
 
 pub fn bind_offering() -> f64 {
     100.0
+}
+
+/// Public rules the native client shows (costs, names). Not a simulation.
+pub fn catalog() -> serde_json::Value {
+    let mut buildings = Vec::new();
+    for b in Building::all() {
+        let mut levels = Vec::new();
+        for lv in 0..10 {
+            let (cost, bronze) = upgrade_cost(*b, lv);
+            levels.push(serde_json::json!({
+                "from": lv,
+                "cost": cost,
+                "bronze": bronze,
+                "secs": upgrade_secs(lv),
+            }));
+        }
+        buildings.push(serde_json::json!({
+            "id": b.as_str(),
+            "title": b.title(),
+        "levels": levels,
+        }));
+    }
+    let mut units = Vec::new();
+    for u in Unit::all() {
+        let (cost, bronze) = u.train_cost();
+        units.push(serde_json::json!({
+            "id": u.as_str(),
+            "title": u.title(),
+            "cost": cost,
+            "bronze": bronze,
+            "secs": u.train_secs(),
+            "atk": u.atk(),
+            "def": u.def(),
+            "speed": u.speed(),
+        }));
+    }
+    serde_json::json!({
+        "buildings": buildings,
+        "units": units,
+        "encanto_cost": encanto_cost(),
+        "encanto_secs": encanto_secs(),
+        "bind_offering": bind_offering(),
+        "max_seats": MAX_SEATS,
+    })
 }
 
 #[cfg(test)]
