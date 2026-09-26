@@ -1,3 +1,5 @@
+![Mourama hero](assets/hero/mourama.svg)
+
 # Mourama
 
 Iberian persistent hillfort. Five seats. The office box is the world.
