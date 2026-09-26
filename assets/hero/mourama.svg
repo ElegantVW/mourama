@@ -6,6 +6,6 @@
 <text x="360" y="176" fill="#6B6FA8">_|_|_|_</text>
 <text x="360" y="206" fill="#6B6FA8">\_____/</text>
 </g>
-<text x="360" y="292" fill="#F0E4EE" font-family="Fraunces, Georgia, serif" font-size="36" text-anchor="middle">Mourama</text>
+<text x="360" y="292" fill="#F0E4EE" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace" font-size="30" font-weight="bold" text-anchor="middle">Mourama</text>
 <text x="360" y="322" fill="#6B6FA8" font-family="DejaVu Sans Mono, monospace" font-size="16" text-anchor="middle">five-seat Iberian hillfort</text>
 </svg>
