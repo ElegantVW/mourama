@@ -108,6 +108,7 @@ $$(".tabs button").forEach((b) => {
     $$(".tab").forEach((t) => (t.hidden = true));
     $("#tab-" + b.dataset.tab).hidden = false;
     if (b.dataset.tab === "map") drawMap();
+    if (b.dataset.tab === "horn") drawHorn();
     if (b.dataset.tab === "reports") drawReports();
   });
 });
@@ -299,6 +300,35 @@ async function drawReports() {
         .join("")
     : "<p class='panel'>No reports yet.</p>";
 }
+
+function landsIn(arrive) {
+  const left = Math.max(0, arrive - Math.floor(Date.now() / 1000));
+  if (left <= 0) return "landing…";
+  const h = String(Math.floor(left / 3600)).padStart(2, "0");
+  const m = String(Math.floor((left % 3600) / 60)).padStart(2, "0");
+  const s = String(left % 60).padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
+
+async function drawHorn() {
+  const j = await api("/api/commands");
+  const incoming = j.incoming || [];
+  const mine = j.mine || [];
+  const row = (a, hot) =>
+    `<article class="report${hot ? " hot" : ""}"><strong>${a.mission || "march"} — ${(a.from_court || "?") + " → " + (a.to_hill || (a.to || []).join(","))}</strong><div class="when">${landsIn(a.arrive)}</div></article>`;
+  $("#horn").innerHTML =
+    `<h3>Incoming (${incoming.length})</h3>` +
+    (incoming.length
+      ? incoming.map((a) => row(a, true)).join("")
+      : "<p class='panel'>The wood is quiet.</p>") +
+    `<h3>Marching (${mine.length})</h3>` +
+    (mine.length
+      ? mine.map((a) => row(a, false)).join("")
+      : "<p class='panel'>No folk on the road.</p>");
+}
+setInterval(() => {
+  if (!$("#tab-horn").hidden) drawHorn();
+}, 1000);
 
 async function maybeGlitter() {
   try {

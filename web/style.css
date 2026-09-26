@@ -135,6 +135,8 @@ button.ghost {
 }
 .report .when { color: var(--silver); font-size: 12px; }
 .report .said { font-size: 18px; color: var(--blush); margin: 6px 0 0; }
+.report.hot { border-left-color: var(--danger, #ff2d55); }
+.report.hot strong { color: var(--danger, #ff2d55); }
 .slip {
   margin: 8px 16px;
   padding: 14px;

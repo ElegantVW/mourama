@@ -138,6 +138,7 @@ struct PlayApp {
     me: Option<Value>,
     map: Option<Value>,
     reports: Option<Value>,
+    commands: Option<Value>,
     last_pull: Instant,
     pull_err: String,
     hill_idx: usize,
@@ -157,6 +158,7 @@ struct PlayApp {
 enum Tab {
     Hill,
     Wood,
+    Horn,
     Reports,
 }
 
@@ -205,6 +207,7 @@ impl PlayApp {
             me: None,
             map: None,
             reports: None,
+            commands: None,
             last_pull: Instant::now() - Duration::from_secs(10),
             pull_err: String::new(),
             hill_idx: 0,
@@ -274,6 +277,9 @@ impl PlayApp {
         }
         if let Ok(v) = self.api("GET", "/api/reports", None) {
             self.reports = Some(v);
+        }
+        if let Ok(v) = self.api("GET", "/api/commands", None) {
+            self.commands = Some(v);
         }
         self.last_pull = Instant::now();
     }
@@ -372,6 +378,7 @@ impl eframe::App for PlayApp {
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut self.tab, Tab::Hill, "Citânia");
                 ui.selectable_value(&mut self.tab, Tab::Wood, "Wood");
+                ui.selectable_value(&mut self.tab, Tab::Horn, "Horn");
                 ui.selectable_value(&mut self.tab, Tab::Reports, "Reports");
             });
         });
@@ -379,6 +386,7 @@ impl eframe::App for PlayApp {
         egui::CentralPanel::default().show(ctx, |ui| match self.tab {
             Tab::Hill => self.ui_hill(ui),
             Tab::Wood => self.ui_wood(ui),
+            Tab::Horn => self.ui_horn(ui),
             Tab::Reports => self.ui_reports(ui),
         });
 
@@ -779,8 +787,82 @@ impl PlayApp {
         }
     }
 
-    fn ui_reports(&mut self, ui: &mut egui::Ui) {
-        let Some(rep) = self.reports.clone() else {
+    fn fmt_lands_in(arrive: i64) -> String {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        let left = arrive - now;
+        if left <= 0 {
+            return "landing…".to_string();
+        }
+        let (h, m, s) = (left / 3600, (left % 3600) / 60, left % 60);
+        format!("{h:02}:{m:02}:{s:02}")
+    }
+
+    fn ui_horn(&mut self, ui: &mut egui::Ui) {
+        let Some(cmd) = self.commands.clone() else {
+            ui.label("no horn yet");
+            return;
+        };
+        let incoming = cmd["incoming"].as_array().cloned().unwrap_or_default();
+        let mine = cmd["mine"].as_array().cloned().unwrap_or_default();
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.colored_label(DANGER, format!("Incoming ({})", incoming.len()));
+            if incoming.is_empty() {
+                ui.label("The wood is quiet.");
+            }
+            for a in &incoming {
+                ui.group(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.colored_label(
+                            DANGER,
+                            format!(
+                                "{} — {} → {}",
+                                a["mission"].as_str().unwrap_or("march"),
+                                a["from_court"].as_str().unwrap_or("?"),
+                                a["to_hill"].as_str().unwrap_or("?"),
+                            ),
+                        );
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.colored_label(
+                                DANGER,
+                                Self::fmt_lands_in(a["arrive"].as_i64().unwrap_or(0)),
+                            );
+                        });
+                    });
+                });
+            }
+            ui.add_space(8.0);
+            ui.colored_label(PINK, format!("Marching ({})", mine.len()));
+            if mine.is_empty() {
+                ui.label("No folk on the road.");
+            }
+            for a in &mine {
+                let where_to = if a["returning"].as_bool().unwrap_or(false) {
+                    "coming home".to_string()
+                } else {
+                    format!(
+                        "{},{}",
+                        a["to"][0].as_i64().unwrap_or(0),
+                        a["to"][1].as_i64().unwrap_or(0)
+                    )
+                };
+                ui.horizontal(|ui| {
+                    ui.label(format!(
+                        "{} — {}",
+                        a["mission"].as_str().unwrap_or("march"),
+                        where_to,
+                    ));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(Self::fmt_lands_in(a["arrive"].as_i64().unwrap_or(0)));
+                    });
+                });
+            }
+        });
+    }
+
+    fn ui_reports(&mut self, ui: &mut egui::Ui) {        let Some(rep) = self.reports.clone() else {
             ui.label("no reports");
             return;
         };

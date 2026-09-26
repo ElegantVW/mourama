@@ -140,6 +140,8 @@ impl Store {
                 coming_home INTEGER NOT NULL DEFAULT 0,
                 loot TEXT
             );
+            CREATE INDEX IF NOT EXISTS idx_armies_owner ON armies(owner_id, arrive);
+            CREATE INDEX IF NOT EXISTS idx_armies_target ON armies(to_q, to_r, arrive);
             CREATE TABLE IF NOT EXISTS reports (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 account_id INTEGER NOT NULL REFERENCES accounts(id),
@@ -971,8 +973,23 @@ impl Store {
         let mut stmt = conn.prepare(
             "SELECT id,from_q,from_r,to_q,to_r,arrive,mission,units,coming_home FROM armies WHERE owner_id=?1 ORDER BY arrive",
         )?;
+        let armies = Self::army_rows(&mut stmt, params![account_id])?;
+        Ok(serde_json::json!({
+            "account_id": account_id,
+            "name": name,
+            "hills": hills,
+            "armies": armies,
+            "clock": now,
+            "catalog": crate::sim::catalog(),
+        }))
+    }
+
+    fn army_rows(
+        stmt: &mut rusqlite::Statement<'_>,
+        params: impl rusqlite::Params,
+    ) -> Result<Vec<serde_json::Value>> {
         let armies: Vec<serde_json::Value> = stmt
-            .query_map(params![account_id], |r| {
+            .query_map(params, |r| {
                 Ok(serde_json::json!({
                     "id": r.get::<_, i64>(0)?,
                     "from": [r.get::<_, i32>(1)?, r.get::<_, i32>(2)?],
@@ -984,13 +1001,44 @@ impl Store {
                 }))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(armies)
+    }
+
+    /// War horn: my marches plus every foreign army marching on my hills.
+    pub fn commands(&self, account_id: i64) -> Result<serde_json::Value> {
+        let now = now_unix();
+        self.tick(now)?;
+        let conn = self.conn.lock().expect("db");
+        let mut stmt = conn.prepare(
+            "SELECT id,from_q,from_r,to_q,to_r,arrive,mission,units,coming_home FROM armies WHERE owner_id=?1 ORDER BY arrive",
+        )?;
+        let mine = Self::army_rows(&mut stmt, params![account_id])?;
+        let mut stmt = conn.prepare(
+            "SELECT a.id,a.from_q,a.from_r,a.to_q,a.to_r,a.arrive,a.mission,ao.name,c.name,c.id
+             FROM armies a
+             JOIN accounts ao ON ao.id = a.owner_id
+             JOIN castros c ON c.q = a.to_q AND c.r = a.to_r AND c.owner_id = ?1
+             WHERE a.owner_id != ?1 AND a.coming_home = 0
+             ORDER BY a.arrive",
+        )?;
+        let incoming: Vec<serde_json::Value> = stmt
+            .query_map(params![account_id], |r| {
+                Ok(serde_json::json!({
+                    "id": r.get::<_, i64>(0)?,
+                    "from": [r.get::<_, i32>(1)?, r.get::<_, i32>(2)?],
+                    "to": [r.get::<_, i32>(3)?, r.get::<_, i32>(4)?],
+                    "arrive": r.get::<_, i64>(5)?,
+                    "mission": r.get::<_, String>(6)?,
+                    "from_court": r.get::<_, String>(7)?,
+                    "to_hill": r.get::<_, String>(8)?,
+                    "to_hill_id": r.get::<_, i64>(9)?,
+                }))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(serde_json::json!({
-            "account_id": account_id,
-            "name": name,
-            "hills": hills,
-            "armies": armies,
+            "mine": mine,
+            "incoming": incoming,
             "clock": now,
-            "catalog": crate::sim::catalog(),
         }))
     }
 
@@ -1408,5 +1456,104 @@ mod tests {
         s.tick(now).unwrap();
         let me = s.me(id).unwrap();
         assert!(me["hills"][0]["buildings"]["mina"]["level"].as_i64().unwrap() >= 1);
+    }
+
+    fn two_courts() -> (Store, i64, i64, i64, i64) {
+        let s = mem();
+        let acode = s.invite().unwrap();
+        let atoken = s.claim(&acode, "Alva", "secret").unwrap();
+        let aid = s.account_for(&atoken).unwrap();
+        let bcode = s.invite().unwrap();
+        let btoken = s.claim(&bcode, "Brun", "secret").unwrap();
+        let bid = s.account_for(&btoken).unwrap();
+        let ame = s.me(aid).unwrap();
+        let bme = s.me(bid).unwrap();
+        let acid = ame["hills"][0]["id"].as_i64().unwrap();
+        let bcid = bme["hills"][0]["id"].as_i64().unwrap();
+        (s, aid, bid, acid, bcid)
+    }
+
+    fn give_pastores(s: &Store, cid: i64, n: i64) {
+        let conn = s.conn.lock().expect("db");
+        let mut u = Units::new();
+        u.insert(Unit::Pastor, n);
+        Store::set_garrison(&conn, cid, &u).unwrap();
+    }
+
+    fn hill_qr(s: &Store, who: i64) -> (i32, i32, String) {
+        let me = s.me(who).unwrap();
+        let h = &me["hills"][0];
+        (
+            h["q"].as_i64().unwrap() as i32,
+            h["r"].as_i64().unwrap() as i32,
+            h["name"].as_str().unwrap().to_string(),
+        )
+    }
+
+    #[test]
+    fn horn_shows_foreign_raid() {
+        let (s, aid, bid, acid, _bcid) = two_courts();
+        give_pastores(&s, acid, 5);
+        let (bq, br, bname) = hill_qr(&s, bid);
+        let mut u = Units::new();
+        u.insert(Unit::Pastor, 5);
+        let arrive = s.send(aid, acid, bq, br, u, "raid").unwrap();
+
+        let bcmd = s.commands(bid).unwrap();
+        let incoming = bcmd["incoming"].as_array().unwrap();
+        assert_eq!(incoming.len(), 1, "defender must see the raid coming");
+        assert_eq!(incoming[0]["from_court"].as_str().unwrap(), "Alva");
+        assert_eq!(incoming[0]["to_hill"].as_str().unwrap(), bname);
+        assert_eq!(incoming[0]["mission"].as_str().unwrap(), "raid");
+        assert_eq!(incoming[0]["arrive"].as_i64().unwrap(), arrive);
+        // No unit composition leaks to the defender.
+        assert!(incoming[0].get("units").is_none());
+
+        let acmd = s.commands(aid).unwrap();
+        assert!(acmd["incoming"].as_array().unwrap().is_empty());
+        assert_eq!(acmd["mine"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn horn_clears_after_landing() {
+        let (s, aid, bid, acid, bcid) = two_courts();
+        give_pastores(&s, acid, 5);
+        // Empty the defender so the raid wins and a return marches home.
+        {
+            let conn = s.conn.lock().expect("db");
+            Store::set_garrison(&conn, bcid, &Units::new()).unwrap();
+        }
+        let (bq, br, _) = hill_qr(&s, bid);
+        let mut u = Units::new();
+        u.insert(Unit::Pastor, 5);
+        let arrive = s.send(aid, acid, bq, br, u, "raid").unwrap();
+        s.tick(arrive + 5).unwrap();
+        let bcmd = s.commands(bid).unwrap();
+        assert!(bcmd["incoming"].as_array().unwrap().is_empty());
+        let acmd = s.commands(aid).unwrap();
+        let mine = acmd["mine"].as_array().unwrap();
+        assert_eq!(mine.len(), 1, "the survivors march home");
+        assert_eq!(mine[0]["mission"].as_str().unwrap(), "return");
+    }
+
+    #[test]
+    fn horn_ignores_wild_hills() {
+        let (s, aid, _bid, acid, _bcid) = two_courts();
+        give_pastores(&s, acid, 5);
+        let (mq, mr): (i32, i32) = {
+            let conn = s.conn.lock().expect("db");
+            conn.query_row(
+                "SELECT q, r FROM tiles WHERE kind = 'mamoa' LIMIT 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap()
+        };
+        let mut u = Units::new();
+        u.insert(Unit::Pastor, 5);
+        s.send(aid, acid, mq, mr, u, "raid").unwrap();
+        let acmd = s.commands(aid).unwrap();
+        assert_eq!(acmd["mine"].as_array().unwrap().len(), 1);
+        assert!(acmd["incoming"].as_array().unwrap().is_empty());
     }
 }

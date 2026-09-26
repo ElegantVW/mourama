@@ -130,6 +130,14 @@ async fn api_reports(
     Ok(Json(app.store.reports(id)?))
 }
 
+async fn api_commands(
+    State(app): State<App>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, VoiceError> {
+    let id = auth_account(&app, &headers).await?;
+    Ok(Json(app.store.commands(id)?))
+}
+
 #[derive(Deserialize)]
 struct UpgradeReq {
     castro_id: i64,
@@ -221,6 +229,7 @@ pub async fn serve(addr: SocketAddr, store: Arc<Store>) -> anyhow::Result<()> {
         .route("/api/map", get(api_map))
         .route("/api/hill", get(api_hill))
         .route("/api/reports", get(api_reports))
+        .route("/api/commands", get(api_commands))
         .route("/api/upgrade", post(api_upgrade))
         .route("/api/train", post(api_train))
         .route("/api/send", post(api_send))
