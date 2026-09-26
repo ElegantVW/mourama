@@ -9,6 +9,18 @@ is the between.
 
 This is a faeOS engine (`ElegantVW/mourama`), not a faeOS in-tree app.
 
+## Look
+
+![Mourama native client — Kel Madje seat](assets/screenshots/mourama-play.png)
+![Mourama app icon](assets/icons/app.png)
+
+```
+   .   
+  /_\  
+_|_|_|_
+\_____/
+```
+
 ## Play
 
 ```
