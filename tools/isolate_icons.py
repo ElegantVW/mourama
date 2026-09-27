@@ -88,7 +88,26 @@ def isolate(path, names):
 
 
 def main():
-    base = Path("/home/evenweaker/.grok/sessions/%2Fhome%2Fevenweaker%2Fbin/01a0d540-25dc-75a2-9f88-446cd72c1b59/images")
+    # The source sheets are a local screenshot drop from an agent session, so
+    # there is no portable default: this used to hardcode an absolute path into
+    # one machine's home directory, which published the username and the local
+    # layout in a public repo (audit F-5) and meant the tool could not run
+    # anywhere else. Take the directory as an argument, or MOURAMA_ICON_SHEETS.
+    import os
+    import sys
+
+    argv = sys.argv[1:]
+    if not argv:
+        argv = [os.environ["MOURAMA_ICON_SHEETS"]] if os.environ.get("MOURAMA_ICON_SHEETS") else []
+    if not argv:
+        sys.exit(
+            "usage: isolate_icons.py <dir-with-1.jpg-2.jpg-3.jpg>\n"
+            "   or: MOURAMA_ICON_SHEETS=<dir> isolate_icons.py\n"
+            "The sheets are a local screenshot drop and are not in the repo."
+        )
+    base = Path(argv[0]).expanduser()
+    if not base.is_dir():
+        sys.exit(f"not a directory: {base}")
     # app mark
     a = rgba(base / "1.jpg")
     mask = not_green(a)
