@@ -70,3 +70,10 @@ sudo loginctl enable-linger evenweaker
 
 Phones at home join the same Tailscale tailnet as this box. See
 [docs/REACH.md](docs/REACH.md). World design: [docs/DESIGN.md](docs/DESIGN.md).
+
+## Roadmap (closed alpha, 5 seats max)
+
+1. Small always-on box + domain (seeking host — `host: mourama`).
+2. Invite codes + SQLite world on disk (`0600`, never git).
+3. Native `mourama-play` + phones as windows on the same tailnet.
+4. No open `:4747` to the whole internet, ever.
