@@ -16,3 +16,6 @@
 *.sqlite
 *.sqlite-journal
 /world/
+
+__pycache__/
+*.pyc
